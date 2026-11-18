@@ -1,0 +1,296 @@
+<section
+  class="overflow-hidden rounded-2xl border border-amber-400/30 bg-gradient-to-br from-slate-900 via-slate-900/95 to-slate-950 shadow-xl shadow-black/30"
+  aria-label="Reproductor de Audiolibro con Voz IA"
+>
+  <!-- Barra superior: Identidad del Audiolibro + Selector de Voz IA + Auto-avance + Descargas -->
+  <div
+    class="flex flex-col justify-between gap-3 border-b border-slate-800/90 bg-slate-950/60 px-5 py-3.5 lg:flex-row lg:items-center"
+  >
+    <div class="flex items-center gap-3">
+      <!-- Icono Audífono / Ondas animadas -->
+      <div
+        [class]="
+          playing()
+            ? 'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/25 transition'
+            : 'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-700 bg-slate-900 text-amber-400 transition'
+        "
+      >
+        @if (playing()) {
+          <div class="flex items-end gap-0.5 h-4" aria-hidden="true">
+            <span class="w-1 animate-bounce rounded-full bg-slate-950 h-3 [animation-delay:-0.2s]"></span>
+            <span class="w-1 animate-bounce rounded-full bg-slate-950 h-4 [animation-delay:-0.05s]"></span>
+            <span class="w-1 animate-bounce rounded-full bg-slate-950 h-2.5 [animation-delay:-0.3s]"></span>
+          </div>
+        } @else {
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 3a9 9 0 0 0-9 9v5a3 3 0 0 0 3 3h1a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2H5v-1a7 7 0 1 1 14 0v1h-2a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h1a3 3 0 0 0 3-3v-5a9 9 0 0 0-9-9Z"
+            />
+          </svg>
+        }
+      </div>
+
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span
+            class="rounded-full border border-amber-400/40 bg-amber-400/15 px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider text-amber-300"
+          >
+            Modo Audiolibro IA
+          </span>
+          <span
+            class="rounded-full border border-sky-400/30 bg-sky-400/10 px-2 py-0.5 text-[11px] font-semibold text-sky-300"
+          >
+            🇨🇱 Español Latino (Chile)
+          </span>
+          <span class="text-xs text-slate-400">
+            12 capítulos narrados · {{ formatMinutes(activeVoiceMeta().totalDurationSec) }} en total
+          </span>
+        </div>
+        <h3 class="mt-0.5 text-sm font-bold text-white sm:text-base">
+          {{ currentChapter().chapterTitle }}
+        </h3>
+      </div>
+    </div>
+
+    <!-- Selector de Narrador IA (Gonzalo / Dalia) -->
+    <div class="flex flex-wrap items-center gap-2">
+      <div
+        class="flex items-center gap-1 rounded-xl border border-slate-800 bg-slate-900 p-1"
+        role="group"
+        aria-label="Seleccionar narrador IA"
+      >
+        @for (v of voices; track v.id) {
+          <button
+            type="button"
+            (click)="selectVoice(v.id)"
+            [title]="v.subtitle"
+            [class]="
+              voiceId() === v.id
+                ? 'rounded-lg bg-amber-400 px-3 py-1 text-xs font-extrabold text-slate-950 shadow cursor-pointer transition'
+                : 'rounded-lg px-3 py-1 text-xs font-semibold text-slate-300 hover:text-white cursor-pointer transition'
+            "
+          >
+            🎙️ {{ v.label }}
+          </button>
+        }
+      </div>
+
+      <!-- Auto-avance de capítulos -->
+      <button
+        type="button"
+        (click)="toggleAutoAdvance()"
+        [class]="
+          autoAdvance()
+            ? 'rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3 py-1.5 text-xs font-bold text-emerald-300 cursor-pointer transition'
+            : 'rounded-xl border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-400 hover:text-slate-200 cursor-pointer transition'
+        "
+        title="Al terminar un capítulo, marca el módulo como completado y reproduce el siguiente automáticamente"
+      >
+        {{ autoAdvance() ? '↻ Auto-avance: ON' : '↻ Auto-avance: OFF' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Cuerpo principal de controles estilo Audible -->
+  <div class="space-y-4 px-5 py-4">
+    <!-- Barra de progreso interactiva -->
+    <div class="space-y-1.5">
+      <div class="flex items-center gap-3">
+        <span class="w-11 text-right font-mono text-xs font-semibold text-amber-300">
+          {{ formatTime(currentTime()) }}
+        </span>
+
+        <div class="relative flex flex-1 items-center">
+          <input
+            #seekSlider
+            type="range"
+            min="0"
+            [max]="effectiveDuration()"
+            step="0.1"
+            [value]="currentTime()"
+            (input)="seekTo(seekSlider.value)"
+            aria-label="Posición del capítulo en segundos"
+            class="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-800 accent-amber-400"
+          />
+        </div>
+
+        <span class="w-11 font-mono text-xs text-slate-400">
+          -{{ formatTime(remainingTime()) }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Botonera central: Cap. Anterior / -10s / Play-Pause / +10s / Cap. Siguiente + Velocidad + Descargas -->
+    <div class="flex flex-col items-center justify-between gap-4 lg:flex-row">
+      <!-- Controles de transporte -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button
+          type="button"
+          (click)="prevChapter()"
+          [disabled]="stepId() === 1"
+          title="Capítulo anterior"
+          class="flex h-9 items-center gap-1 rounded-xl border border-slate-800 bg-slate-900 px-3 text-xs font-semibold text-slate-300 hover:border-slate-600 hover:text-white disabled:opacity-35 cursor-pointer"
+        >
+          ⏮ <span class="hidden sm:inline">Anterior</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="skipSeconds(-10)"
+          title="Retroceder 10 segundos"
+          class="flex h-9 items-center rounded-xl border border-slate-800 bg-slate-900 px-3 font-mono text-xs font-bold text-slate-300 hover:border-slate-600 hover:text-white cursor-pointer"
+        >
+          -10s
+        </button>
+
+        <button
+          type="button"
+          (click)="togglePlay()"
+          [class]="
+            playing()
+              ? 'flex h-11 items-center gap-2 rounded-2xl bg-amber-400 px-6 text-sm font-extrabold text-slate-950 shadow-lg shadow-amber-400/25 hover:bg-amber-300 cursor-pointer transition'
+              : 'flex h-11 items-center gap-2 rounded-2xl bg-red-500 px-6 text-sm font-extrabold text-white shadow-lg shadow-red-500/25 hover:bg-red-600 cursor-pointer transition'
+          "
+        >
+          @if (playing()) {
+            <span>⏸</span>
+            <span>Pausar</span>
+          } @else {
+            <span>▶</span>
+            <span>{{ currentTime() > 0.5 ? 'Reanudar' : 'Escuchar capítulo' }}</span>
+          }
+        </button>
+
+        <button
+          type="button"
+          (click)="skipSeconds(10)"
+          title="Adelantar 10 segundos"
+          class="flex h-9 items-center rounded-xl border border-slate-800 bg-slate-900 px-3 font-mono text-xs font-bold text-slate-300 hover:border-slate-600 hover:text-white cursor-pointer"
+        >
+          +10s
+        </button>
+
+        <button
+          type="button"
+          (click)="nextChapter()"
+          [disabled]="stepId() === 12"
+          title="Siguiente capítulo"
+          class="flex h-9 items-center gap-1 rounded-xl border border-slate-800 bg-slate-900 px-3 text-xs font-semibold text-slate-300 hover:border-slate-600 hover:text-white disabled:opacity-35 cursor-pointer"
+        >
+          <span class="hidden sm:inline">Siguiente</span> ⏭
+        </button>
+      </div>
+
+      <!-- Velocidad 0.75x - 2x + Transcripción + Descarga MP3 -->
+      <div class="flex flex-wrap items-center justify-center gap-2">
+        <!-- Selector de velocidad -->
+        <div
+          class="flex items-center gap-0.5 rounded-xl border border-slate-800 bg-slate-950 p-1"
+          role="group"
+          aria-label="Velocidad de narración"
+        >
+          @for (spd of speeds; track spd) {
+            <button
+              type="button"
+              (click)="setSpeed(spd)"
+              [class]="
+                playbackRate() === spd
+                  ? 'rounded-lg bg-slate-800 px-2 py-1 font-mono text-[11px] font-extrabold text-amber-300 cursor-pointer'
+                  : 'rounded-lg px-2 py-1 font-mono text-[11px] font-medium text-slate-400 hover:text-slate-200 cursor-pointer'
+              "
+            >
+              {{ spd }}x
+            </button>
+          }
+        </div>
+
+        <!-- Botón Transcripción Sincronizada -->
+        <button
+          type="button"
+          (click)="showTranscript.update((v) => !v)"
+          [class]="
+            showTranscript()
+              ? 'rounded-xl border border-indigo-500/50 bg-indigo-500/20 px-3 py-1.5 text-xs font-bold text-indigo-200 cursor-pointer'
+              : 'rounded-xl border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:border-slate-600 cursor-pointer'
+          "
+        >
+          {{ showTranscript() ? 'Ocultar guion ▲' : 'Guion sincronizado ▼' }}
+        </button>
+
+        <!-- Descargar capítulo actual MP3 -->
+        <a
+          [href]="currentTrack().audioUrl"
+          [download]="chapterDownloadName()"
+          title="Descargar este capítulo en formato MP3"
+          class="rounded-xl border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:border-slate-600 hover:text-white"
+        >
+          ⬇ Cap. {{ stepId() }} (.mp3)
+        </a>
+
+        <!-- Descargar Audiolibro Completo (12 capítulos en un solo MP3) -->
+        <a
+          [href]="activeVoiceMeta().fullAudiobookUrl"
+          [download]="fullAudiobookDownloadName()"
+          title="Descargar el audiolibro completo (12 capítulos unificados en MP3)"
+          class="rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 py-1.5 text-xs font-bold text-amber-300 hover:bg-amber-400/20"
+        >
+          ⬇ Libro completo (.mp3)
+        </a>
+      </div>
+    </div>
+
+    <!-- Subtítulo en vivo (WhisperSync: muestra la frase exacta que se está narrando) -->
+    <div
+      class="flex items-start gap-2.5 rounded-xl border border-slate-800/90 bg-slate-950/90 px-4 py-3 text-xs sm:text-sm"
+    >
+      <span
+        class="mt-0.5 shrink-0 rounded bg-amber-400/15 px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-amber-300"
+      >
+        Frase {{ activeCueIndex() + 1 }}/{{ currentTrack().cues.length }}
+      </span>
+      <p class="leading-relaxed text-slate-200">
+        {{ activeCue()?.text }}
+      </p>
+    </div>
+
+    <!-- Guion completo interactivo desplegable (clic en cualquier frase salta a ese segundo exacto) -->
+    @if (showTranscript()) {
+      <div class="rounded-xl border border-slate-800 bg-slate-950 p-4">
+        <div class="mb-2.5 flex items-center justify-between text-xs">
+          <span class="font-bold uppercase tracking-wider text-indigo-300">
+            Transcripción interactiva · Haz clic en cualquier frase para saltar a ese instante
+          </span>
+          <span class="text-slate-400">{{ activeVoiceMeta().subtitle }}</span>
+        </div>
+
+        <div class="max-h-64 space-y-1.5 overflow-y-auto pr-1">
+          @for (cue of currentTrack().cues; track cue.start; let idx = $index) {
+            @let isCurrentCue = activeCueIndex() === idx;
+            <button
+              type="button"
+              (click)="jumpToCue(cue)"
+              [class]="
+                isCurrentCue
+                  ? 'flex w-full items-start gap-3 rounded-xl border border-amber-400/50 bg-amber-400/15 px-3 py-2 text-left text-xs font-semibold text-amber-100 transition cursor-pointer'
+                  : 'flex w-full items-start gap-3 rounded-xl border border-transparent px-3 py-2 text-left text-xs text-slate-300 hover:bg-slate-900 hover:text-white transition cursor-pointer'
+              "
+            >
+              <span
+                [class]="
+                  isCurrentCue
+                    ? 'mt-0.5 shrink-0 font-mono text-[11px] font-extrabold text-amber-300'
+                    : 'mt-0.5 shrink-0 font-mono text-[11px] text-slate-500'
+                "
+              >
+                {{ formatTime(cue.start) }}
+              </span>
+              <span class="leading-relaxed">{{ cue.text }}</span>
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</section>

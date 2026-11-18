@@ -1,0 +1,1014 @@
+<main class="mx-auto max-w-6xl px-6 py-8">
+  <!-- Cabecera de progreso general -->
+  <section class="mb-8 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
+    <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      <div>
+        <span class="text-xs font-bold uppercase tracking-wider text-red-400">
+          Curso Completo · Angular 22 (Edición 2026)
+        </span>
+        <h2 class="mt-1 text-2xl font-extrabold text-white">
+          De Cero Absoluto a Arquitectura Avanzada con Pokémon
+        </h2>
+        <p class="mt-1 text-sm text-slate-400">
+          12 módulos progresivos organizados en 3 niveles, cada uno con código real y laboratorio en vivo.
+        </p>
+      </div>
+
+      <div class="min-w-56 rounded-xl border border-slate-800 bg-slate-950 p-3.5">
+        <div class="flex items-center justify-between text-xs font-semibold">
+          <span class="text-slate-400">Progreso total</span>
+          <span class="text-amber-400">
+            {{ completedStepIds().length }} / {{ steps.length }} ({{ progressPercent() }}%)
+          </span>
+        </div>
+        <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-800">
+          <div
+            class="h-full rounded-full bg-gradient-to-r from-emerald-400 via-amber-400 to-red-500 transition-all duration-300"
+            [style.width.%]="progressPercent()"
+          ></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Reproductor de Audiolibro IA estilo Audible (12 capítulos sincronizados) -->
+  <div class="mb-8">
+    <app-audiobook-player
+      [(stepId)]="activeStepId"
+      [(voiceId)]="audiobookVoiceId"
+      [(playing)]="isAudiobookPlaying"
+      (chapterCompleted)="onChapterAudioCompleted($event)"
+    />
+  </div>
+
+  <div class="grid grid-cols-1 gap-8 lg:grid-cols-12">
+    <!-- Menú lateral agrupado por Nivel (Básico / Intermedio / Avanzado) -->
+    <aside class="lg:col-span-4">
+      <div class="space-y-5 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        @for (lvl of levels; track lvl) {
+          @let meta = levelMeta[lvl];
+          <div>
+            <div class="mb-2 flex items-center gap-2 px-2">
+              <span class="h-2.5 w-2.5 rounded-full" [class]="meta.dotClass"></span>
+              <div>
+                <p class="text-xs font-extrabold uppercase tracking-wider text-white">
+                  {{ meta.label }}
+                </p>
+                <p class="text-[11px] text-slate-400">{{ meta.subtitle }}</p>
+              </div>
+            </div>
+
+            <div class="space-y-1">
+              @for (item of stepsByLevel(lvl); track item.id) {
+                @let isActive = activeStepId() === item.id;
+                @let isDone = completedStepIds().includes(item.id);
+
+                <button
+                  type="button"
+                  (click)="selectStep(item.id)"
+                  [class]="
+                    isActive
+                      ? 'flex w-full items-center gap-3 rounded-xl border border-red-500/60 bg-red-500/15 px-3 py-2.5 text-left transition cursor-pointer'
+                      : 'flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left hover:bg-slate-800/70 transition cursor-pointer'
+                  "
+                >
+                  <span
+                    [class]="
+                      isDone
+                        ? 'flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-xs font-bold text-slate-950'
+                        : isActive
+                          ? 'flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white'
+                          : 'flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs font-semibold text-slate-400'
+                    "
+                  >
+                    {{ isDone ? '✓' : item.id }}
+                  </span>
+                  <span
+                    [class]="
+                      isActive
+                        ? 'flex-1 text-xs font-bold text-white'
+                        : 'flex-1 text-xs font-medium text-slate-300'
+                    "
+                  >
+                    {{ item.shortTitle }}
+                  </span>
+                  <span
+                    [class]="
+                      isActive && isAudiobookPlaying()
+                        ? 'shrink-0 rounded-md bg-amber-400/20 px-1.5 py-0.5 font-mono text-[10px] font-extrabold text-amber-300'
+                        : 'shrink-0 font-mono text-[10px] text-slate-500'
+                    "
+                  >
+                    {{ isActive && isAudiobookPlaying() ? '🔊 ' : '' }}{{ chapterDurationLabel(item.id) }}
+                  </span>
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        <div class="border-t border-slate-800 pt-3 px-1">
+          <a
+            routerLink="/"
+            class="block rounded-xl border border-slate-700 bg-slate-950 py-2 text-center text-xs font-semibold text-slate-300 hover:border-slate-500 hover:text-white"
+          >
+            ← Volver a la Pokédex
+          </a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Contenido principal del módulo activo -->
+    <section class="space-y-6 lg:col-span-8">
+      @let step = activeStep();
+      @let lvlInfo = levelMeta[step.level];
+
+      <!-- 1. Explicación teórica y reglas clave -->
+      <article class="rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span
+            class="rounded-full border px-3 py-1 text-xs font-bold"
+            [class]="lvlInfo.pillClass"
+          >
+            {{ step.badge }}
+          </span>
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              (click)="toggleCurrentChapterAudio()"
+              [class]="
+                isAudiobookPlaying()
+                  ? 'rounded-lg border border-amber-400/50 bg-amber-400/20 px-3 py-1 text-xs font-bold text-amber-200 cursor-pointer'
+                  : 'rounded-lg border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-semibold text-amber-300 hover:border-amber-400/50 cursor-pointer'
+              "
+            >
+              {{ isAudiobookPlaying() ? '⏸ Pausar narración IA' : '▶ Escuchar módulo' }}
+            </button>
+            <button
+              type="button"
+              (click)="toggleCompleteCurrent()"
+              [class]="
+                isCurrentStepCompleted()
+                  ? 'rounded-lg border border-emerald-500/50 bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-300 cursor-pointer'
+                  : 'rounded-lg border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-300 hover:border-slate-500 cursor-pointer'
+              "
+            >
+              {{ isCurrentStepCompleted() ? '✓ Módulo completado' : 'Marcar como completado' }}
+            </button>
+          </div>
+        </div>
+
+        <h3 class="mt-3 text-2xl font-extrabold text-white">{{ step.title }}</h3>
+        <p class="mt-3 leading-relaxed text-slate-300">{{ step.summary }}</p>
+
+        <div class="mt-4 rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">
+          <strong class="font-bold text-amber-300">Puente mental:</strong>
+          {{ step.analogy }}
+        </div>
+
+        <div class="mt-5">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">
+            Puntos clave en Angular 22
+          </h4>
+          <ul class="mt-2.5 space-y-2">
+            @for (point of step.keyPoints; track point) {
+              <li class="flex items-start gap-2.5 text-sm text-slate-200">
+                <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-red-500"></span>
+                <span>{{ point }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      </article>
+
+      <!-- 2. Video animado programando en VS Code (sin cámara) + Bloque de código completo -->
+      <app-vscode-coding-video
+        [stepId]="step.id"
+        [voiceId]="audiobookVoiceId()"
+        [audioPlaying]="isAudiobookPlaying()"
+        [audioTimeSec]="audiobookPlayer()?.currentTimeSec() ?? 0"
+        [audioDurationSec]="audiobookPlayer()?.currentDurationSec() ?? 50"
+        [activeSubtitle]="audiobookPlayer()?.currentCueText() ?? ''"
+        (requestToggleAudiobook)="toggleCurrentChapterAudio()"
+        (pauseAudiobook)="pauseCurrentChapterAudio()"
+      />
+
+      <!-- 2b. Bloques completos TypeScript + HTML listos para copiar -->
+      <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <div class="flex flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
+          <div class="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-4 py-2.5">
+            <span class="font-mono text-xs font-semibold text-sky-400">TypeScript (.ts)</span>
+            <button
+              type="button"
+              (click)="copyCode(step.tsCode, 'ts')"
+              class="text-xs font-medium text-slate-400 hover:text-white cursor-pointer"
+            >
+              {{ copiedKind() === 'ts' ? '¡Copiado!' : 'Copiar' }}
+            </button>
+          </div>
+          <pre class="overflow-x-auto p-4 text-xs leading-relaxed text-slate-200"><code>{{ step.tsCode }}</code></pre>
+        </div>
+
+        <div class="flex flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
+          <div class="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-4 py-2.5">
+            <span class="font-mono text-xs font-semibold text-amber-400">Plantilla (.html)</span>
+            <button
+              type="button"
+              (click)="copyCode(step.htmlCode, 'html')"
+              class="text-xs font-medium text-slate-400 hover:text-white cursor-pointer"
+            >
+              {{ copiedKind() === 'html' ? '¡Copiado!' : 'Copiar' }}
+            </button>
+          </div>
+          <pre class="overflow-x-auto p-4 text-xs leading-relaxed text-slate-200"><code>{{ step.htmlCode }}</code></pre>
+        </div>
+      </div>
+
+      <!-- 3. LABORATORIO INTERACTIVO EN VIVO (PASOS 1 AL 12) -->
+      <section class="rounded-2xl border-2 border-indigo-500/40 bg-slate-900/80 p-6">
+        <div class="mb-4">
+          <span class="text-xs font-bold uppercase tracking-wider text-indigo-400">
+            Laboratorio en Vivo · Módulo {{ step.id }}
+          </span>
+          <p class="mt-0.5 text-xs text-slate-300">{{ step.challenge }}</p>
+        </div>
+
+        @switch (step.id) {
+          <!-- ===================================================== -->
+          <!-- MÓDULO 1: @COMPONENT E INTERPOLACIÓN {{ }}            -->
+          <!-- ===================================================== -->
+          @case (1) {
+            <div class="grid grid-cols-1 items-center gap-6 rounded-xl bg-slate-950 p-5 sm:grid-cols-2">
+              <div class="rounded-xl border border-slate-800 bg-slate-900 p-4 text-center">
+                <span class="font-mono text-xs text-slate-400">
+                  Región {{ currentKanto.region }} · Nº {{ currentKanto.id }}
+                </span>
+                <img
+                  [src]="artwork(currentKanto.id)"
+                  [alt]="currentKanto.name"
+                  class="mx-auto my-2 h-28 w-28 object-contain"
+                />
+                <h4 class="text-lg font-extrabold text-white">{{ currentKanto.name }}</h4>
+                <p class="text-xs text-emerald-400">{{ currentKanto.role }}</p>
+                <p class="mt-2 text-xs text-slate-400">
+                  Peso calculado en {{ '{{ }}' }}:
+                  <strong class="text-white">{{ currentKanto.weightKg * 1000 }} gramos</strong>
+                </p>
+              </div>
+
+              <div class="space-y-3">
+                <p class="text-xs text-slate-400">
+                  Elige qué objeto de datos expone la clase TypeScript hacia la plantilla:
+                </p>
+                <div class="flex flex-col gap-2">
+                  @for (poke of kantoStarters; track poke.id; let idx = $index) {
+                    <button
+                      type="button"
+                      (click)="lab1Index = idx"
+                      [class]="
+                        lab1Index === idx
+                          ? 'rounded-xl bg-red-500 px-4 py-2 text-left text-xs font-bold text-white cursor-pointer'
+                          : 'rounded-xl border border-slate-800 bg-slate-900 px-4 py-2 text-left text-xs text-slate-300 hover:border-slate-600 cursor-pointer'
+                      "
+                    >
+                      Mostrar {{ poke.name }} ({{ poke.weightKg }} kg)
+                    </button>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- ===================================================== -->
+          <!-- MÓDULO 2: [PROP], (EVENTO) Y #REF                     -->
+          <!-- ===================================================== -->
+          @case (2) {
+            <div class="space-y-4 rounded-xl bg-slate-950 p-5">
+              <div class="flex flex-col items-center gap-4 sm:flex-row">
+                <img
+                  [src]="artwork(4)"
+                  alt="Charmander"
+                  [style.opacity]="centerHp() === 0 ? 0.35 : 1"
+                  class="h-24 w-24 object-contain transition"
+                />
+                <div class="w-full flex-1">
+                  <div class="flex justify-between text-xs font-bold">
+                    <span class="text-white">Charmander · Centro Pokémon</span>
+                    <span class="text-emerald-400">{{ centerHp() }} / 100 PS</span>
+                  </div>
+                  <div class="mt-1.5 h-3 w-full overflow-hidden rounded-full bg-slate-800">
+                    <div
+                      class="h-full rounded-full transition-all duration-300"
+                      [class]="
+                        centerHp() > 50
+                          ? 'bg-emerald-500'
+                          : centerHp() > 20
+                            ? 'bg-amber-400'
+                            : 'bg-rose-500'
+                      "
+                      [style.width.%]="centerHp()"
+                    ></div>
+                  </div>
+                  <p class="mt-2 text-xs italic text-amber-300">
+                    Grito actual: "{{ customCry() }}"
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  (click)="healCenterPokemon(25)"
+                  [disabled]="centerHp() === 100"
+                  class="rounded-xl bg-emerald-500 px-3.5 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-40 cursor-pointer"
+                >
+                  Usar Poción (+25 PS)
+                </button>
+                <button
+                  type="button"
+                  (click)="damageCenterPokemon(30)"
+                  [disabled]="centerHp() === 0"
+                  class="rounded-xl bg-rose-500 px-3.5 py-2 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-40 cursor-pointer"
+                >
+                  Recibir Ataque (-30 PS)
+                </button>
+              </div>
+
+              <div class="flex gap-2">
+                <input
+                  #cryInput
+                  type="text"
+                  [value]="customCry()"
+                  (keydown.enter)="customCry.set(cryInput.value)"
+                  placeholder="Escribe un nuevo grito con #cryInput..."
+                  class="flex-1 rounded-xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-white"
+                />
+                <button
+                  type="button"
+                  (click)="customCry.set(cryInput.value)"
+                  class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700 cursor-pointer"
+                >
+                  Actualizar grito
+                </button>
+              </div>
+            </div>
+          }
+
+          <!-- ===================================================== -->
+          <!-- MÓDULO 3: PIPES | NATIVOS Y @PIPE PERSONALIZADO       -->
+          <!-- ===================================================== -->
+          @case (3) {
+            @let spec = activePipeSpecimen();
+            <div class="space-y-4 rounded-xl bg-slate-950 p-5">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex gap-2">
+                  @for (item of pipeSpecimens; track item.id; let i = $index) {
+                    <button
+                      type="button"
+                      (click)="selectedPipeIdx.set(i)"
+                      [class]="
+                        selectedPipeIdx() === i
+                          ? 'rounded-lg bg-red-500 px-3 py-1.5 text-xs font-bold capitalize text-white cursor-pointer'
+                          : 'rounded-lg border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs capitalize text-slate-300 cursor-pointer'
+                      "
+                    >
+                      {{ item.name }}
+                    </button>
+                  }
+                </div>
+
+                <div class="flex items-center gap-1.5 text-xs text-slate-400">
+                  <span>Dígitos en <code>pokeId</code>:</span>
+                  @for (d of [3, 4, 5]; track d) {
+                    <button
+                      type="button"
+                      (click)="pipeDigits.set($any(d))"
+                      [class]="
+                        pipeDigits() === d
+                          ? 'rounded bg-amber-400 px-2 py-0.5 font-bold text-slate-950 cursor-pointer'
+                          : 'rounded bg-slate-800 px-2 py-0.5 text-slate-300 cursor-pointer'
+                      "
+                    >
+                      {{ d }}
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 rounded-xl border border-slate-800 bg-slate-900 p-4 text-xs sm:grid-cols-4">
+                <div>
+                  <span class="text-slate-400"><code>| pokeId:{{ pipeDigits() }}</code></span>
+                  <p class="mt-1 font-mono text-base font-extrabold text-amber-400">
+                    {{ spec.id | pokeId: pipeDigits() }}
+                  </p>
+                </div>
+                <div>
+                  <span class="text-slate-400"><code>| uppercase</code></span>
+                  <p class="mt-1 text-base font-extrabold text-white">
+                    {{ spec.name | uppercase }}
+                  </p>
+                </div>
+                <div>
+                  <span class="text-slate-400"><code>| percent:'1.1-1'</code></span>
+                  <p class="mt-1 text-base font-extrabold text-emerald-400">
+                    {{ spec.catchRate | percent: '1.1-1' }}
+                  </p>
+                </div>
+                <div>
+                  <span class="text-slate-400"><code>| currency:'USD'</code></span>
+                  <p class="mt-1 text-base font-extrabold text-sky-400">
+                    {{ spec.cardPrice | currency: 'USD' }}
+                  </p>
+                </div>
+              </div>
+              <p class="text-[11px] text-slate-400">
+                Peso formateado con <code>DecimalPipe</code>:
+                <strong class="text-white">{{ spec.weightKg | number: '1.1-2' }} kg</strong>
+              </p>
+            </div>
+          }
+
+          <!-- ===================================================== -->
+          <!-- MÓDULO 4: @IF, @FOR (TRACK/@EMPTY), @SWITCH MÚLTIPLE  -->
+          <!-- ===================================================== -->
+          @case (4) {
+            <div class="space-y-4 rounded-xl bg-slate-950 p-5">
+              <div class="flex flex-wrap gap-2">
+                @for (f of ['all', 'curacion', 'captura', 'especial', 'vacio']; track f) {
+                  <button
+                    type="button"
+                    (click)="bagFilter.set($any(f))"
+                    [class]="
+                      bagFilter() === f
+                        ? 'rounded-lg bg-red-500 px-3 py-1.5 text-xs font-bold capitalize text-white cursor-pointer'
+                        : 'rounded-lg border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs capitalize text-slate-300 cursor-pointer'
+                    "
+                  >
+                    {{ f === 'all' ? 'Todos' : f === 'vacio' ? 'Simular Mochila Vacía (@empty)' : f }}
+                  </button>
+                }
+              </div>
+
+              <div class="space-y-2">
+                @for (item of visibleBagItems(); track item.id) {
+                  @let agotado = item.qty === 0;
+                  <div class="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900 px-4 py-2.5 text-xs">
+                    <div>
+                      <span class="font-bold text-white">{{ item.name }}</span>
+                      <!-- @switch con múltiples @case agrupados (Angular 22) -->
+                      @switch (item.category) {
+                        @case ('curacion')
+                        @case ('captura') {
+                          <span class="ml-2 rounded bg-slate-800 px-2 py-0.5 text-[11px] text-slate-300">
+                            Tienda Pokémon
+                          </span>
+                        }
+                        @default {
+                          <span class="ml-2 rounded bg-amber-400/20 px-2 py-0.5 text-[11px] font-semibold text-amber-300">
+                            Objeto Raro de Liga
+                          </span>
+                        }
+                      }
+                    </div>
+
+                    @if (agotado) {
+                      <span class="font-semibold text-rose-400">Agotado (0)</span>
+                    } @else {
+                      <span class="font-mono font-bold text-emerald-400">x{{ item.qty }}</span>
+                    }
+                  </div>
+                } @empty {
+                  <div class="rounded-xl border border-dashed border-slate-700 p-6 text-center text-xs text-slate-400">
+                    Bloque <code>&#64;empty</code> activado: no hay objetos en este bolsillo de tu mochila.
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- ===================================================== -->
+          <!-- MÓDULO 5: SIGNAL(), .SET() Y .UPDATE()                -->
+          <!-- ===================================================== -->
+          @case (5) {
+            @let p = lab5State();
+            <div class="grid grid-cols-1 items-center gap-6 rounded-xl bg-slate-950 p-5 sm:grid-cols-2">
+              <div class="text-center">
+                <img [src]="p.sprite" [alt]="p.name" class="mx-auto h-32 w-32 object-contain" />
+                <h4 class="mt-2 text-lg font-extrabold text-white">
+                  {{ p.name }} <span class="text-amber-400">Nv. {{ p.level }}</span>
+                </h4>
+                @if (p.evolved) {
+                  <span class="mt-1 inline-block rounded-full bg-amber-400/20 px-3 py-0.5 text-xs font-bold text-amber-300">
+                    ¡Evolucionado a Raichu!
+                  </span>
+                } @else {
+                  <span class="mt-1 inline-block text-xs text-slate-400">
+                    Evoluciona al Nv. 16 o usando Piedra Trueno
+                  </span>
+                }
+              </div>
+
+              <div class="space-y-2.5">
+                <button
+                  type="button"
+                  (click)="pikachuLevel.update((n) => n + 1)"
+                  class="w-full rounded-xl bg-amber-400 py-2 text-sm font-bold text-slate-950 hover:bg-amber-300 cursor-pointer"
+                >
+                  Subir Nivel con .update() (+1)
+                </button>
+                <button
+                  type="button"
+                  (click)="thunderStoneUsed.set(true)"
+                  [disabled]="p.evolved"
+                  class="w-full rounded-xl border border-indigo-500/50 bg-indigo-500/15 py-2 text-sm font-semibold text-indigo-300 disabled:opacity-40 cursor-pointer"
+                >
+                  Piedra Trueno con .set(true)
+                </button>
+                <button
+                  type="button"
+                  (click)="resetLab5()"
+                  class="w-full rounded-xl border border-slate-700 bg-slate-900 py-1.5 text-xs font-semibold text-slate-300 cursor-pointer"
+                >
+                  Reiniciar Signals
+                </button>
+                <div class="rounded-lg bg-slate-900 p-2.5 font-mono text-xs text-emerald-400">
+                  {{ '{' }} name: '{{ p.name }}', level: {{ p.level }} {{ '}' }}
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- ===================================================== -->
+          <!-- MÓDULO 6: COMPUTED() Y LINKEDSIGNAL()                 -->
+          <!-- ===================================================== -->
+          @case (6) {
+            @let shinyPoke = activeShinyPokemon();
+            <div class="space-y-4 rounded-xl bg-slate-950 p-5">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex gap-2">
+                  @for (item of shinyShowcase; track item.id) {
+                    <button
+                      type="button"
+                      (click)="selectedShinyPokemonId.set(item.id)"
+                      [class]="
+                        selectedShinyPokemonId() === item.id
+                          ? 'rounded-lg bg-red-500 px-3 py-1.5 text-xs font-bold text-white cursor-pointer'
+                          : 'rounded-lg border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs text-slate-300 cursor-pointer'
+                      "
+                    >
+                      {{ item.name }}
+                    </button>
+                  }
+                </div>
+
+                <button
+                  type="button"
+                  (click)="isShinyMode.update((v) => !v)"
+                  [class]="
+                    isShinyMode()
+                      ? 'rounded-xl border border-amber-400 bg-amber-400/20 px-4 py-1.5 text-xs font-bold text-amber-300 cursor-pointer'
+                      : 'rounded-xl border border-slate-700 bg-slate-900 px-4 py-1.5 text-xs font-semibold text-slate-300 cursor-pointer'
+                  "
+                >
+                  {{ isShinyMode() ? '✨ Modo Shiny Activo' : 'Activar Shiny ✨' }}
+                </button>
+              </div>
+
+              <div class="flex flex-col items-center rounded-xl border border-slate-800 bg-slate-900 p-5 sm:flex-row sm:justify-around">
+                <img [src]="shinyPoke.sprite" [alt]="shinyPoke.name" class="h-32 w-32 object-contain" />
+                <div class="mt-3 text-center sm:mt-0 sm:text-left">
+                  <h4 class="text-lg font-extrabold text-white">{{ shinyPoke.name }}</h4>
+                  <p class="text-xs text-slate-400">
+                    Ataque Base: {{ shinyPoke.baseAtk }} · Con Danza Espada (<code>computed</code>):
+                    <strong class="text-emerald-400">{{ shinyPoke.boostedAtk }}</strong>
+                  </p>
+                  <p class="mt-2 text-xs text-slate-400">
+                    <code>isShinyMode()</code> = <strong class="text-amber-400">{{ isShinyMode() }}</strong>
+                    <span class="block text-[11px] text-slate-500">
+                      Cambia de Pokémon arriba para ver cómo <code>linkedSignal</code> resetea Shiny a false.
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- ===================================================== -->
+          <!-- MÓDULO 7: INPUT(), OUTPUT() Y MODEL()                 -->
+          <!-- ===================================================== -->
+          @case (7) {
+            <div class="space-y-4 rounded-xl bg-slate-950 p-5">
+              <div class="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+                <p class="text-xs font-semibold uppercase tracking-wider text-sky-400">
+                  Componente Padre (TutorialPage)
+                </p>
+                <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                  <span class="text-slate-400">Legendario objetivo:</span>
+                  @for (legend of ['Mewtwo', 'Articuno', 'Zapdos']; track legend) {
+                    <button
+                      type="button"
+                      (click)="targetLegendary.set($any(legend))"
+                      [class]="
+                        targetLegendary() === legend
+                          ? 'rounded-lg bg-sky-500 px-2.5 py-1 font-bold text-white cursor-pointer'
+                          : 'rounded-lg border border-slate-700 px-2.5 py-1 text-slate-300 cursor-pointer'
+                      "
+                    >
+                      {{ legend }}
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    (click)="chosenBall.set('Master Ball')"
+                    class="ml-auto rounded-lg border border-purple-500/50 bg-purple-500/20 px-2.5 py-1 font-semibold text-purple-300 cursor-pointer"
+                  >
+                    Seleccionar Master Ball desde el Padre
+                  </button>
+                </div>
+                <p class="mt-2 text-xs text-slate-300">
+                  Valor sincronizado con <code>[(selectedBall)]</code>:
+                  <strong class="text-amber-400">{{ chosenBall() }}</strong>
+                </p>
+              </div>
+
+              <app-pokeball-picker
+                [pokemonName]="targetLegendary()"
+                [(selectedBall)]="chosenBall"
+                (throwBall)="handleBallThrow($event)"
+              />
+
+              <p class="rounded-lg bg-slate-900 px-3 py-2 text-xs text-emerald-300">
+                Salida <code>(throwBall)</code> recibida: {{ lastThrowLog() }}
+              </p>
+            </div>
+          }
+
+          <!-- ===================================================== -->
+          <!-- MÓDULO 8: SERVICIO GLOBAL (INJECT + EFFECT)           -->
+          <!-- ===================================================== -->
+          @case (8) {
+            <div class="space-y-4 rounded-xl bg-slate-950 p-5">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <p class="text-xs font-semibold text-slate-300">
+                  Cinturón Global en <code>TeamStore</code> + <code>localStorage</code>:
+                  <strong class="text-amber-400">{{ teamStore.count() }} / 6</strong>
+                </p>
+                @if (teamStore.count() > 0) {
+                  <button
+                    type="button"
+                    (click)="teamStore.clearTeam()"
+                    class="rounded-lg border border-rose-500/40 bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-300 cursor-pointer"
+                  >
+                    Vaciar equipo
+                  </button>
+                }
+              </div>
+
+              <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                @for (poke of starterCatalog; track poke.id) {
+                  @let inTeam = teamStore.hasPokemon(poke.id);
+                  <button
+                    type="button"
+                    (click)="teamStore.togglePokemon({ id: poke.id, name: poke.name, sprite: poke.sprite })"
+                    [disabled]="!inTeam && teamStore.isFull()"
+                    [class]="
+                      inTeam
+                        ? 'flex items-center gap-2 rounded-xl border border-amber-400 bg-amber-400/15 p-2.5 text-left text-xs font-bold text-amber-200 cursor-pointer'
+                        : 'flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900 p-2.5 text-left text-xs text-slate-300 hover:border-slate-600 disabled:opacity-40 cursor-pointer'
+                    "
+                  >
+                    <img [src]="poke.sprite" [alt]="poke.name" class="h-9 w-9 object-contain" />
+                    <div>
+                      <span class="block font-bold text-white">{{ poke.name }}</span>
+                      <span class="text-[11px]">{{ inTeam ? '✓ En equipo' : '+ Reclutar' }}</span>
+                    </div>
+                  </button>
+                }
+              </div>
+              <p class="text-[11px] text-slate-400">
+                Mira arriba en la barra global de la app: el contador cambia en simultáneo y sobrevive si refrescas el navegador gracias a <code>effect()</code>.
+              </p>
+            </div>
+          }
+
+          <!-- ===================================================== -->
+          <!-- MÓDULO 9: HTTPRESOURCE + INTERCEPTOR FUNCIONAL        -->
+          <!-- ===================================================== -->
+          @case (9) {
+            <div class="space-y-4 rounded-xl bg-slate-950 p-5">
+              <div class="flex flex-wrap gap-2">
+                @for (preset of quickApiPresets; track preset) {
+                  <button
+                    type="button"
+                    (click)="apiPokemonQuery.set(preset)"
+                    [class]="
+                      apiPokemonQuery() === preset
+                        ? 'rounded-lg bg-red-500 px-3 py-1.5 text-xs font-bold capitalize text-white cursor-pointer'
+                        : 'rounded-lg border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs capitalize text-slate-300 cursor-pointer'
+                    "
+                  >
+                    {{ preset }}
+                  </button>
+                }
+                <button
+                  type="button"
+                  (click)="loadRandomPokemon()"
+                  class="rounded-lg bg-indigo-500 px-3 py-1.5 text-xs font-bold text-white hover:bg-indigo-600 cursor-pointer"
+                >
+                  ¡Aleatorio (1-1025)!
+                </button>
+                <button
+                  type="button"
+                  (click)="apiPokemonQuery.set('missingno-404')"
+                  class="rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-300 cursor-pointer"
+                >
+                  Forzar 404
+                </button>
+              </div>
+
+              <div class="min-h-32 rounded-xl border border-slate-800 bg-slate-900 p-4">
+                @if (pokemonResource.isLoading()) {
+                  <div class="flex h-24 items-center justify-center gap-3 text-xs text-indigo-300">
+                    <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-indigo-400 border-t-transparent"></span>
+                    Consultando PokéAPI con <code>httpResource()</code>...
+                  </div>
+                } @else if (pokemonResource.error()) {
+                  <div class="py-4 text-center text-xs text-rose-400">
+                    <code>pokemonResource.error()</code> detectó un 404 para "{{ apiPokemonQuery() }}".
+                  </div>
+                } @else if (pokemonResource.hasValue()) {
+                  @let poke = pokemonResource.value();
+                  <div class="flex items-center gap-4">
+                    @if (poke.sprites.other['official-artwork'].front_default; as imgUrl) {
+                      <img [src]="imgUrl" [alt]="poke.name" class="h-24 w-24 object-contain" />
+                    }
+                    <div>
+                      <span class="font-mono text-xs text-slate-400">{{ poke.id | pokeId }} · PokéAPI en vivo</span>
+                      <h4 class="text-lg font-extrabold capitalize text-white">{{ poke.name }}</h4>
+                      <p class="text-xs text-slate-400">
+                        Altura: {{ poke.height / 10 }} m · Peso: {{ poke.weight / 10 }} kg
+                      </p>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- Consola del HttpInterceptorFn real -->
+              <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+                <div class="mb-2 flex items-center justify-between text-[11px]">
+                  <span class="font-mono font-bold text-sky-400">
+                    Monitor en vivo · pokeApiLoggerInterceptor
+                  </span>
+                  <button
+                    type="button"
+                    (click)="httpLogStore.clear()"
+                    class="text-slate-400 hover:text-white cursor-pointer"
+                  >
+                    Limpiar logs
+                  </button>
+                </div>
+                <div class="space-y-1 font-mono text-[11px]">
+                  @for (log of httpLogStore.logs(); track log.id) {
+                    <div class="flex items-center justify-between rounded bg-slate-950 px-2.5 py-1">
+                      <span class="text-slate-300">GET {{ log.url }}</span>
+                      <span
+                        [class]="log.status === 200 ? 'text-emerald-400' : 'text-rose-400'"
+                      >
+                        {{ log.status }} · {{ log.durationMs }}ms
+                      </span>
+                    </div>
+                  } @empty {
+                    <p class="text-slate-500">Haz clic en cualquier Pokémon arriba para interceptar la petición.</p>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- ===================================================== -->
+          <!-- MÓDULO 10: RXJS <-> SIGNALS INTEROP (DEBOUNCE)        -->
+          <!-- ===================================================== -->
+          @case (10) {
+            <div class="space-y-4 rounded-xl bg-slate-950 p-5">
+              <input
+                #rxInput
+                type="text"
+                [value]="rawRxSearch()"
+                (input)="onRxSearchInput(rxInput.value)"
+                placeholder="Teclea rápido aquí (ej. char, mew, garchomp)..."
+                class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
+              />
+
+              <div class="grid grid-cols-2 gap-3 text-xs">
+                <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+                  <span class="text-slate-400">Teclas pulsadas (Signal inmediata):</span>
+                  <p class="mt-1 text-lg font-extrabold text-amber-400">{{ keystrokeCount() }}</p>
+                  <p class="font-mono text-[11px] text-slate-400">raw: "{{ rawRxSearch() }}"</p>
+                </div>
+                <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+                  <span class="text-slate-400">Emisiones tras <code>debounceTime(350)</code>:</span>
+                  <p class="mt-1 text-lg font-extrabold text-emerald-400">{{ emittedCount() }}</p>
+                  <p class="font-mono text-[11px] text-slate-400">debounced: "{{ debouncedRxSearch() }}"</p>
+                </div>
+              </div>
+
+              <div class="flex flex-wrap gap-2">
+                @for (name of debouncedMatches(); track name) {
+                  <span class="rounded-lg border border-slate-800 bg-slate-900 px-3 py-1 text-xs font-semibold text-slate-200">
+                    {{ name }}
+                  </span>
+                } @empty {
+                  <span class="text-xs text-slate-500">Sin coincidencias para "{{ debouncedRxSearch() }}".</span>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- ===================================================== -->
+          <!-- MÓDULO 11: SIGNAL FORMS AVANZADOS (ITEM CLAUSE VGC)   -->
+          <!-- ===================================================== -->
+          @case (11) {
+            <div class="grid grid-cols-1 gap-5 rounded-xl bg-slate-950 p-5 sm:grid-cols-2">
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-300">Competidor VGC</label>
+                  <input
+                    type="text"
+                    [formField]="vgcForm.trainerName"
+                    class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-white"
+                  />
+                  @for (err of vgcForm.trainerName().errors(); track err.kind) {
+                    <p class="mt-1 text-xs text-rose-400">{{ err.message }}</p>
+                  }
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-slate-300">
+                    Objeto de {{ vgcModel().slot1Pokemon }} (Slot 1)
+                  </label>
+                  <select
+                    [formField]="vgcForm.slot1Item"
+                    class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-white"
+                  >
+                    @for (it of competitiveItems; track it) {
+                      <option [value]="it">{{ it }}</option>
+                    }
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-slate-300">
+                    Objeto de {{ vgcModel().slot2Pokemon }} (Slot 2 · Regla Cruzada)
+                  </label>
+                  <select
+                    [formField]="vgcForm.slot2Item"
+                    class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-white"
+                  >
+                    @for (it of competitiveItems; track it) {
+                      <option [value]="it">{{ it }}</option>
+                    }
+                  </select>
+                  @for (err of vgcForm.slot2Item().errors(); track err.kind) {
+                    <p class="mt-1 text-xs font-semibold text-rose-400">{{ err.message }}</p>
+                  }
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-slate-300">Nivel Máximo (50 - 100)</label>
+                  <input
+                    type="number"
+                    [formField]="vgcForm.levelCap"
+                    class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-white"
+                  />
+                  @for (err of vgcForm.levelCap().errors(); track err.kind) {
+                    <p class="mt-1 text-xs text-rose-400">{{ err.message }}</p>
+                  }
+                </div>
+
+                <button
+                  type="button"
+                  (click)="tournamentRegistered.set(true)"
+                  [disabled]="!vgcForm().valid()"
+                  class="w-full rounded-xl bg-emerald-500 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-40 cursor-pointer"
+                >
+                  Inscribir Equipo Oficial
+                </button>
+              </div>
+
+              <div class="flex flex-col justify-between rounded-xl border border-amber-400/40 bg-slate-900 p-4 text-xs">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="font-bold uppercase tracking-wider text-amber-400">Ficha Oficial VGC</span>
+                    <span
+                      [class]="
+                        vgcForm().valid()
+                          ? 'rounded-full bg-emerald-500/20 px-2 py-0.5 font-bold text-emerald-300'
+                          : 'rounded-full bg-rose-500/20 px-2 py-0.5 font-bold text-rose-300'
+                      "
+                    >
+                      {{ vgcForm().valid() ? 'Reglas OK' : 'Revisa Objetos/Nivel' }}
+                    </span>
+                  </div>
+
+                  <div class="mt-4 space-y-2 text-slate-300">
+                    <p>Entrenador: <strong class="text-white">{{ vgcModel().trainerName || '—' }}</strong> (Nv. {{ vgcModel().levelCap }})</p>
+                    <p>1. {{ vgcModel().slot1Pokemon }} @ <strong class="text-sky-300">{{ vgcModel().slot1Item }}</strong></p>
+                    <p>2. {{ vgcModel().slot2Pokemon }} @ <strong class="text-sky-300">{{ vgcModel().slot2Item }}</strong></p>
+                  </div>
+                </div>
+
+                @if (tournamentRegistered() && vgcForm().valid()) {
+                  <p class="mt-4 rounded-lg bg-emerald-500/15 p-2 text-center font-bold text-emerald-300">
+                    ¡Equipo validado e inscrito en el torneo!
+                  </p>
+                } @else {
+                  <p class="mt-4 text-[11px] text-slate-400">
+                    Prueba poner "Vidasfera" en ambos slots para activar <code>validate()</code> con <code>valueOf()</code>.
+                  </p>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- ===================================================== -->
+          <!-- MÓDULO 12: @DEFER + DIRECTIVA HOST + VITEST           -->
+          <!-- ===================================================== -->
+          @case (12) {
+            <div class="space-y-4 rounded-xl bg-slate-950 p-5">
+              <!-- Demostración de Directiva con host: {} -->
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div
+                  appTypeGlow="dragon"
+                  class="rounded-xl border border-indigo-500/40 bg-slate-900 p-3 text-center text-xs cursor-pointer"
+                >
+                  <strong class="block text-indigo-300">Directiva [appTypeGlow]</strong>
+                  <span class="text-slate-400">Pasa el cursor (Dragón)</span>
+                </div>
+                <div
+                  appTypeGlow="psychic"
+                  class="rounded-xl border border-pink-500/40 bg-slate-900 p-3 text-center text-xs cursor-pointer"
+                >
+                  <strong class="block text-pink-300">Directiva [appTypeGlow]</strong>
+                  <span class="text-slate-400">Pasa el cursor (Psíquico)</span>
+                </div>
+                <div
+                  appTypeGlow="electric"
+                  class="rounded-xl border border-amber-500/40 bg-slate-900 p-3 text-center text-xs cursor-pointer"
+                >
+                  <strong class="block text-amber-300">Directiva [appTypeGlow]</strong>
+                  <span class="text-slate-400">Pasa el cursor (Eléctrico)</span>
+                </div>
+              </div>
+
+              <!-- Carga diferida real con @defer (on interaction) -->
+              @defer (on interaction) {
+                <app-stats-radar [pokemonName]="'Rayquaza'" [stats]="rayquazaStats" />
+              } @placeholder {
+                <button
+                  type="button"
+                  class="w-full rounded-xl border-2 border-dashed border-emerald-500/50 bg-emerald-500/10 py-5 text-center text-xs font-bold text-emerald-300 hover:bg-emerald-500/20 cursor-pointer"
+                >
+                  ⚡ Haz clic aquí para disparar &#64;defer (on interaction) y descargar &lt;app-stats-radar&gt;
+                </button>
+              } @loading (minimum 450ms) {
+                <div class="rounded-xl border border-slate-800 bg-slate-900 py-5 text-center text-xs text-indigo-300">
+                  Cargando chunk diferido (<code>&#64;loading</code>)...
+                </div>
+              }
+            </div>
+          }
+        }
+      </section>
+
+      <!-- 4. Navegación inferior Anterior / Siguiente -->
+      <div class="flex items-center justify-between pt-2">
+        <button
+          type="button"
+          (click)="goPrev()"
+          [disabled]="step.id === 1"
+          class="rounded-xl border border-slate-800 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-300 hover:border-slate-600 disabled:opacity-40 cursor-pointer"
+        >
+          ← Módulo anterior
+        </button>
+
+        @if (step.id < 12) {
+          <button
+            type="button"
+            (click)="goNext()"
+            class="rounded-xl bg-red-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-red-500/20 hover:bg-red-600 cursor-pointer"
+          >
+            Completar e ir al Módulo {{ step.id + 1 }} →
+          </button>
+        } @else {
+          <button
+            type="button"
+            (click)="toggleCompleteCurrent()"
+            class="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-bold text-slate-950 hover:bg-emerald-400 cursor-pointer"
+          >
+            {{ isCurrentStepCompleted() ? '¡Graduado Maestro Angular 22! 🏆' : 'Completar Módulo 12 ✓' }}
+          </button>
+        }
+      </div>
+    </section>
+  </div>
+</main>

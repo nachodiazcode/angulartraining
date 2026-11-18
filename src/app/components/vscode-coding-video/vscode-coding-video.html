@@ -1,0 +1,363 @@
+@let sc = scene();
+@let tl = timelineState();
+@let activeTab = activeTabFile();
+
+<section
+  aria-label="Video animado programando en VS Code sin cámara"
+  class="overflow-hidden rounded-2xl border border-slate-700/90 bg-[#181818] shadow-xl shadow-black/40"
+>
+  <!-- Cabecera de modos y estado de sincronización -->
+  <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 bg-slate-900/95 px-4 py-2.5">
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="rounded-md bg-sky-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-sky-300">
+        Código animado · Sin cámara
+      </span>
+      <span class="text-xs font-semibold text-slate-200">
+        VS Code Dark+ · {{ sc.statusBranch }}
+      </span>
+      @if (isAudioSyncActive()) {
+        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-300">
+          <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+          Sincronizado con narración CL
+        </span>
+      }
+    </div>
+
+    <div
+      role="tablist"
+      aria-label="Modo de visualización del video de código"
+      class="inline-flex rounded-xl border border-slate-700 bg-slate-950 p-0.5"
+    >
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="viewMode() === 'live'"
+        (click)="setViewMode('live')"
+        [class]="
+          viewMode() === 'live'
+            ? 'rounded-lg bg-sky-500 px-3 py-1 text-xs font-bold text-slate-950 transition cursor-pointer'
+            : 'rounded-lg px-3 py-1 text-xs font-medium text-slate-300 hover:text-white transition cursor-pointer'
+        "
+      >
+        ⚡ Simulador VS Code en vivo
+      </button>
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="viewMode() === 'mp4'"
+        (click)="setViewMode('mp4')"
+        [class]="
+          viewMode() === 'mp4'
+            ? 'rounded-lg bg-amber-400 px-3 py-1 text-xs font-bold text-slate-950 transition cursor-pointer'
+            : 'rounded-lg px-3 py-1 text-xs font-medium text-slate-300 hover:text-white transition cursor-pointer'
+        "
+      >
+        🎬 Vídeo MP4 (sin cámara)
+      </button>
+    </div>
+  </div>
+
+  @if (viewMode() === 'live') {
+    <!-- Barra de título estilo macOS + VS Code -->
+    <div class="flex items-center justify-between border-b border-[#2b2b2b] bg-[#323233] px-3.5 py-2">
+      <div class="flex items-center gap-2">
+        <span class="h-3 w-3 rounded-full bg-[#ff5f56]"></span>
+        <span class="h-3 w-3 rounded-full bg-[#ffbd2e]"></span>
+        <span class="h-3 w-3 rounded-full bg-[#27c93f]"></span>
+        <button
+          type="button"
+          (click)="toggleExplorer()"
+          class="ml-2 rounded border border-white/10 bg-black/20 px-2 py-0.5 text-[11px] font-medium text-slate-300 hover:bg-black/40 cursor-pointer"
+        >
+          {{ showExplorer() ? 'Ocultar Explorer' : 'Mostrar Explorer' }}
+        </button>
+      </div>
+
+      <span class="truncate px-2 font-mono text-[11px] text-slate-300">
+        {{ sc.windowTitle }}
+      </span>
+
+      <span class="hidden font-mono text-[11px] text-amber-300 sm:inline">
+        {{ typingPercentLabel() }}%
+      </span>
+    </div>
+
+    <!-- Cuerpo del IDE: Activity Bar + Explorer + Editor + Terminal -->
+    <div class="flex min-h-[360px] flex-col bg-[#1e1e1e] md:flex-row">
+      @if (showExplorer()) {
+        <aside class="w-full shrink-0 border-b border-[#2b2b2b] bg-[#252526] md:w-56 md:border-r md:border-b-0">
+          <div class="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            Explorador · Pokédex 2026
+          </div>
+          <ul class="space-y-0.5 px-1.5 pb-3 font-mono text-[11px]">
+            @for (item of sc.explorer; track item.name + item.depth) {
+              @let isActiveFile = item.activeTabId === tl.activeTab;
+              <li
+                [style.padding-left.px]="8 + item.depth * 12"
+                [class]="
+                  isActiveFile
+                    ? 'flex items-center justify-between rounded bg-[#37373d] py-1 pr-2 text-white font-semibold'
+                    : 'flex items-center justify-between rounded py-1 pr-2 text-slate-300/90'
+                "
+              >
+                <span class="flex items-center gap-1.5 truncate">
+                  @if (item.kind === 'folder') {
+                    <span class="text-amber-400">▾</span>
+                    <span class="truncate text-slate-200">{{ item.name }}</span>
+                  } @else if (item.kind === 'ts') {
+                    <span class="font-bold text-sky-400">TS</span>
+                    <span class="truncate">{{ item.name }}</span>
+                  } @else if (item.kind === 'html') {
+                    <span class="font-bold text-orange-400">&lt;&gt;</span>
+                    <span class="truncate">{{ item.name }}</span>
+                  } @else {
+                    <span class="font-bold text-emerald-400">✔</span>
+                    <span class="truncate">{{ item.name }}</span>
+                  }
+                </span>
+                @if (item.gitStatus) {
+                  <span
+                    [class]="
+                      item.gitStatus === 'M'
+                        ? 'text-[10px] font-bold text-amber-300'
+                        : 'text-[10px] font-bold text-emerald-400'
+                    "
+                  >
+                    {{ item.gitStatus }}
+                  </span>
+                }
+              </li>
+            }
+          </ul>
+        </aside>
+      }
+
+      <div class="flex min-w-0 flex-1 flex-col">
+        <!-- Pestañas abiertas de archivos -->
+        <div class="flex items-center overflow-x-auto border-b border-[#2b2b2b] bg-[#252526]">
+          @for (tab of sc.tabs; track tab.id) {
+            @let isSelected = tab.id === tl.activeTab;
+            <button
+              type="button"
+              (click)="selectTab(tab.id)"
+              [class]="
+                isSelected
+                  ? 'flex items-center gap-2 border-t-2 border-t-amber-400 border-r border-r-[#2b2b2b] bg-[#1e1e1e] px-3.5 py-2 font-mono text-xs font-semibold text-white cursor-pointer'
+                  : 'flex items-center gap-2 border-t-2 border-t-transparent border-r border-r-[#2b2b2b] bg-[#2d2d2d] px-3.5 py-2 font-mono text-xs text-slate-400 hover:text-slate-200 cursor-pointer'
+              "
+            >
+              <span [class]="tab.badgeColor">{{ tab.id === 'ts' ? 'TS' : '&lt;&gt;' }}</span>
+              <span>{{ tab.filename }}</span>
+            </button>
+          }
+
+          <div class="ml-auto flex items-center gap-2 px-3">
+            @if (manualTabOverride() !== null) {
+              <button
+                type="button"
+                (click)="manualTabOverride.set(null)"
+                class="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-semibold text-amber-300 hover:bg-slate-700 cursor-pointer"
+              >
+                Seguir foco automático
+              </button>
+            }
+            <span class="hidden truncate font-mono text-[11px] text-slate-500 lg:inline">
+              {{ activeTab.path }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Editor de código animado -->
+        <div class="relative flex-1 overflow-x-auto bg-[#1e1e1e] px-2 py-3 font-mono text-xs leading-6">
+          @for (line of renderedCodeLines(); track line.lineNumber) {
+            <div
+              [class]="
+                line.isFocus
+                  ? 'flex items-center rounded bg-[#2a2d2e]/85 border-l-2 border-amber-400/80 pr-3'
+                  : 'flex items-center border-l-2 border-transparent pr-3'
+              "
+            >
+              <span class="w-9 shrink-0 select-none pr-3 text-right text-[11px] text-[#858585]">
+                {{ line.lineNumber }}
+              </span>
+              <span class="whitespace-pre">
+                @for (tok of line.tokens; track $index) {
+                  <span [class]="tok.className">{{ tok.text }}</span>
+                }
+                @if (line.hasCursor) {
+                  <span
+                    aria-hidden="true"
+                    class="ml-0.5 inline-block h-4 w-[2px] translate-y-0.5 animate-pulse bg-amber-300"
+                  ></span>
+                }
+              </span>
+            </div>
+          }
+
+          @if (tl.hint) {
+            <div class="mt-3 ml-9 inline-flex max-w-xl items-center gap-2 rounded-lg border border-[#454545] bg-[#252526]/95 px-3 py-1.5 text-[11px] text-sky-200 shadow-lg">
+              <span class="font-bold text-amber-300">✦ IntelliSense</span>
+              <span>{{ tl.hint }}</span>
+            </div>
+          }
+        </div>
+
+        <!-- Terminal integrada de VS Code -->
+        <div class="border-t border-[#303031] bg-[#181818] px-3.5 py-2.5 font-mono text-[11px]">
+          <div class="mb-1.5 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400">
+            <span class="flex items-center gap-2">
+              <span class="border-b border-amber-400 pb-0.5 font-bold text-slate-200">TERMINAL</span>
+              <span>PROBLEMS (0)</span>
+              <span class="hidden sm:inline">OUTPUT</span>
+            </span>
+            <span class="text-slate-500">zsh · angular-cli</span>
+          </div>
+          <div class="space-y-1">
+            @for (tline of tl.terminalLines; track $index) {
+              <p
+                [class]="
+                  tline.tone === 'ok'
+                    ? 'text-emerald-400'
+                    : tline.tone === 'cmd'
+                      ? 'text-sky-300 font-semibold'
+                      : tline.tone === 'warn'
+                        ? 'text-amber-300'
+                        : 'text-slate-300'
+                "
+              >
+                {{ tline.text }}
+              </p>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subtítulo en vivo si está disponible + barra de estado + controles -->
+    @if (activeSubtitle()) {
+      <div class="border-t border-slate-800 bg-slate-950/90 px-4 py-2 text-center text-xs font-medium text-slate-200">
+        “{{ activeSubtitle() }}”
+      </div>
+    }
+
+    <div class="border-t border-[#2b2b2b] bg-[#20232a] px-4 py-2.5">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            (click)="toggleDemoPlayback()"
+            class="inline-flex items-center gap-1.5 rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-sky-400 transition cursor-pointer"
+          >
+            @if (audioPlaying()) {
+              ⏸ Pausar narración + código
+            } @else if (localPlaying()) {
+              ⏸ Pausar código
+            } @else {
+              ▶ Animar código en VS Code
+            }
+          </button>
+
+          <button
+            type="button"
+            (click)="restartDemo()"
+            class="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:border-slate-500 hover:text-white cursor-pointer"
+          >
+            ↺ Reiniciar
+          </button>
+
+          <button
+            type="button"
+            (click)="cycleSpeed()"
+            class="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 font-mono text-xs font-semibold text-amber-300 hover:border-slate-500 cursor-pointer"
+          >
+            {{ demoSpeed() }}x
+          </button>
+
+          @if (!audioPlaying()) {
+            <button
+              type="button"
+              (click)="requestToggleAudiobook.emit()"
+              class="rounded-lg border border-amber-400/50 bg-amber-400/15 px-2.5 py-1.5 text-xs font-semibold text-amber-300 hover:bg-amber-400/25 cursor-pointer"
+            >
+              🎙️ Reproducir con voz IA
+            </button>
+          }
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          @for (kf of sc.keyframes; track kf.at) {
+            @let idx = $index;
+            <button
+              type="button"
+              (click)="jumpToKeyframe(kf)"
+              [title]="'Escena ' + (idx + 1)"
+              [class]="
+                idx === tl.stageIndex
+                  ? 'rounded-md bg-amber-400 px-2 py-0.5 font-mono text-[10px] font-bold text-slate-950 cursor-pointer'
+                  : 'rounded-md border border-slate-700 bg-slate-900 px-2 py-0.5 font-mono text-[10px] text-slate-400 hover:text-white cursor-pointer'
+              "
+            >
+              {{ idx + 1 }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="mt-2.5 flex items-center gap-3">
+        <span class="font-mono text-[10px] text-slate-400">Escena {{ tl.stageIndex + 1 }}/{{ tl.stageCount }}</span>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          aria-label="Progreso de animación de código en VS Code"
+          [value]="typingPercentLabel()"
+          (input)="scrubToPercent($any($event.target).value)"
+          class="h-1.5 flex-1 cursor-pointer accent-sky-400"
+        />
+        <span class="w-9 text-right font-mono text-[10px] text-slate-300">{{ typingPercentLabel() }}%</span>
+      </div>
+    </div>
+
+    <!-- Barra inferior clásica de VS Code -->
+    <div class="flex items-center justify-between bg-[#007acc] px-3 py-1 font-mono text-[10px] text-white">
+      <div class="flex items-center gap-3">
+        <span class="font-bold">⎇ {{ sc.statusBranch }}</span>
+        <span class="hidden sm:inline">0 ⊗ 0 ⚠</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span>Ln {{ tl.focusLine }}</span>
+        <span>UTF-8</span>
+        <span>{{ tl.activeTab === 'ts' ? 'TypeScript (Angular 22)' : 'Angular HTML' }}</span>
+      </div>
+    </div>
+  } @else {
+    <!-- Reproductor real de Vídeo MP4 pre-renderizado (sin cámara) -->
+    <div class="bg-[#111318]">
+      <video
+        controls
+        playsinline
+        preload="metadata"
+        [src]="mp4VideoUrl()"
+        (play)="pauseAudiobook.emit()"
+        class="aspect-video w-full bg-black"
+      ></video>
+
+      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 bg-slate-900/95 px-4 py-3">
+        <div class="text-xs text-slate-300">
+          <span class="font-bold text-amber-300">
+            {{ voiceId() === 'gonzalo' ? 'Profesor Gonzalo (CL)' : 'Mentora Dalia (CL)' }}
+          </span>
+          · Vídeo MP4 720p de VS Code animado con subtítulos y audio chileno (sin cámara)
+        </div>
+        <a
+          [href]="mp4VideoUrl()"
+          [attr.download]="mp4DownloadName()"
+          class="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/50 bg-amber-400/15 px-3 py-1.5 text-xs font-bold text-amber-300 hover:bg-amber-400/25"
+        >
+          ⬇ Descargar vídeo (.mp4)
+        </a>
+      </div>
+    </div>
+  }
+</section>
